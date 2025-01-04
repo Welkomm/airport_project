@@ -1,5 +1,33 @@
-@main def hello(): Unit =
-  println("Hello world!")
-  println(msg)
+package main
 
-def msg = "I was compiled by Scala 3. :)"
+import services.{CsvParser, DataStore}
+import models.{Airport, Country, Runway}
+import ui.{ConsoleUI, GuiApp}
+
+@main
+def main(args: String*): Unit =
+  val isGuiMode = args.contains("--gui")
+
+  if isGuiMode then
+    // Lancement GUI
+    GuiApp.main(Array.empty)
+  else
+    // Lancement console
+    val store = new DataStore()
+
+    println("Loading data from CSV files...")
+
+    val countries = CsvParser.parseCSV("resources/countries.csv")(Country.from)
+    val airports  = CsvParser.parseCSV("resources/airports.csv")(Airport.from)
+    val runways   = CsvParser.parseCSV("resources/runways.csv")(Runway.from)
+
+    println(s"Loaded ${countries.size} countries")
+    println(s"Loaded ${airports.size} airports")
+    println(s"Loaded ${runways.size} runways")
+
+    countries.foreach(store.addCountry)
+    airports.foreach(store.addAirport)
+    runways.foreach(store.addRunway)
+
+    val ui = new ConsoleUI(store)
+    ui.start()

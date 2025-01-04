@@ -1,21 +1,29 @@
 package services
 
 import scala.io.Source
+import munit.FunSuite
 
-object CsvParser {
-  def parseCSV[T](filename: String, skipHeader: Boolean = true)
-                 (parser: Array[String] => Option[T]): List[T] = {
-    val source = Source.fromFile(filename, "UTF-8")
-    try {
-      val lines = source.getLines().toList
-      val dataLines = if skipHeader then lines.tail else lines
-      
-      dataLines.flatMap { line => 
-        val columns = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)")
-        parser(columns)
-      }
-    } finally {
-      source.close()
+class CvsParserTest extends FunSuite {
+
+  test("parseCSV should parse lines with skipHeader") {
+    // On peut juste tester la fonction, si besoin
+    val testContent =
+      """id,name
+        |1,Test
+        |2,Example
+        |""".stripMargin
+
+    val tempFile = java.io.File.createTempFile("testCsv", ".csv")
+    val writer = new java.io.PrintWriter(tempFile)
+    writer.write(testContent)
+    writer.close()
+
+    val list = CsvParser.parseCSV(tempFile.getAbsolutePath) { arr =>
+      if arr.length >= 2 then Some(arr(1)) else None
     }
+
+    assertEquals(list, List("Test", "Example"))
+
+    tempFile.delete()
   }
 }
