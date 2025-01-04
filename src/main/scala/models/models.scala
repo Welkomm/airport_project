@@ -1,3 +1,5 @@
+package models
+
 // Définition des classes de données (case classes) pour le modèle
 case class Country(
   id: Int,           // Identifiant unique du pays
