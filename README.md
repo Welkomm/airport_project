@@ -16,7 +16,6 @@ This repository contains a Scala/SBT project that parses three CSV files (countr
 - [Features](#features)  
 - [Tests](#tests)  
 - [Requirements and Constraints](#requirements-and-constraints)  
-- [Contributing](#contributing)  
 - [License](#license)
 
 ---
@@ -165,19 +164,8 @@ sbt test
 
 ---
 
-## Contributing
-
-1. **Fork** the repo and **create a new branch** for your changes.
-2. Avoid the restricted keywords (`for`, `try`, `var`, `null`, etc.); keep the code purely functional or use methods like `map`, `flatMap`, `foldLeft`.
-3. **Commit** and push your branch, then open a **Pull Request**.
-
----
-
 ## License
 
 This project is provided as-is. No explicit license is attached. If you plan to distribute or use it publicly, please check with relevant stakeholders or add a license of your choice.
 
 ---
-
-**Download this README**  
-To download, simply copy the content above into a file named `README.md` in your project directory.
