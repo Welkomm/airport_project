@@ -1,33 +1,5 @@
 package models
 
-object SafeParse:
-  // Convertit une String en Option[Int] sans try/catch
-  // On supprime les caractères non-chiffres, si c'est vide => None
-  def safeToInt(raw: String): Option[Int] =
-    val digits = raw.trim
-    if digits.matches("^-?\\d+$") then
-      // On vérifie manuellement si c'est un int
-      // On peut faire un foldLeft pour convertir, ou un bigDecimal check
-      // Pour simplifier, on fait un parse basé sur BigInt
-      val maybeInt = bigIntToSafeInt(scala.util.Try(BigInt(digits)).toOption)
-      maybeInt
-    else None
-
-  private def bigIntToSafeInt(biOpt: Option[BigInt]): Option[Int] =
-    biOpt.flatMap { bi =>
-      if bi.isValidInt then Some(bi.intValue)
-      else None
-    }
-
-  // Convertit une String en Option[Double]
-  def safeToDouble(raw: String): Option[Double] =
-    val d = raw.trim
-    if d.matches("^-?\\d+(\\.\\d+)?$") then
-      // on tente un parse via BigDecimal => double
-      scala.util.Try(BigDecimal(d)).toOption.map(_.toDouble)
-    else None
-
-
 case class Country(
   id: Int,
   code: String,
@@ -36,23 +8,6 @@ case class Country(
   wikipediaLink: String,
   keywords: Option[String]
 )
-
-object Country:
-  def from(line: Array[String]): Option[Country] =
-    if line.length >= 5 then
-      val idString = line(0).replaceAll("\"", "")
-      SafeParse.safeToInt(idString).map { parsedId =>
-        val code = line(1).replaceAll("\"", "")
-        val name = line(2).replaceAll("\"", "")
-        val continent = line(3).replaceAll("\"", "")
-        val wiki = line(4).replaceAll("\"", "")
-        val kws =
-          if line.length > 5 then Some(line(5).replaceAll("\"", ""))
-          else None
-        Country(parsedId, code, name, continent, wiki, kws)
-      }
-    else None
-
 
 case class Airport(
   id: Int,
@@ -64,32 +19,6 @@ case class Airport(
   elevation: Option[Int]
 )
 
-object Airport:
-  def from(line: Array[String]): Option[Airport] =
-    if line.length >= 14 then
-      val idStr  = line(0).replaceAll("\"", "")
-      val latStr = line(4).replaceAll("\"", "")
-      val lonStr = line(5).replaceAll("\"", "")
-      val elevStr= line(6).replaceAll("\"", "")
-
-      val maybeId   = SafeParse.safeToInt(idStr)
-      val maybeLat  = SafeParse.safeToDouble(latStr)
-      val maybeLon  = SafeParse.safeToDouble(lonStr)
-
-      maybeId.flatMap { realId =>
-        maybeLat.flatMap { realLat =>
-          maybeLon.map { realLon =>
-            val ident = line(1).replaceAll("\"", "")
-            val name   = line(3).replaceAll("\"", "")
-            val cCode  = line(8).replaceAll("\"", "")
-            val elev   = SafeParse.safeToInt(elevStr).filter(_ != 0)
-            Airport(realId, ident, name, cCode, realLat, realLon, elev)
-          }
-        }
-      }
-    else None
-
-
 case class Runway(
   id: Int,
   airportRef: Int,
@@ -97,41 +26,66 @@ case class Runway(
   leIdent: String,
   length: Option[Int],
   width: Option[Int],
-  lighted: Option[Int],
-  closed: Option[Int]
+  lighted: Option[Int], // Represents data as 1/0
+  closed: Option[Int]   // Consistent with lighted field
 )
 
-object Runway:
+object Country {
+  def from(line: Array[String]): Option[Country] =
+    if (line.length >= 5) {
+      for {
+        id <- line(0).toIntOption
+      } yield Country(
+        id = id,
+        code = line(1).replaceAll("\"", ""),
+        name = line(2).replaceAll("\"", ""),
+        continent = line(3).replaceAll("\"", ""),
+        wikipediaLink = line(4).replaceAll("\"", ""),
+        keywords = line.lift(5).map(_.replaceAll("\"", ""))
+      )
+    } else {
+      None
+    }
+}
+
+object Airport {
+  def from(line: Array[String]): Option[Airport] =
+    if (line.length >= 9) {
+      for {
+        id <- line(0).toIntOption
+        latitude <- line(4).toDoubleOption
+        longitude <- line(5).toDoubleOption
+      } yield Airport(
+        id = id,
+        ident = line(1).replaceAll("\"", ""),
+        name = line(3).replaceAll("\"", ""),
+        countryCode = line(8).replaceAll("\"", ""),
+        latitude = latitude,
+        longitude = longitude,
+        elevation = line.lift(6).flatMap(_.toIntOption)
+      )
+    } else {
+      None
+    }
+}
+
+object Runway {
   def from(line: Array[String]): Option[Runway] =
-    if line.length >= 9 then
-      val idStr       = line(0).replaceAll("\"", "")
-      val refStr      = line(1).replaceAll("\"", "")
-      val lengthStr   = line(3).replaceAll("\"", "")
-      val widthStr    = line(4).replaceAll("\"", "")
-      val lightedStr  = line(6).replaceAll("\"", "")
-      val closedStr   = line(7).replaceAll("\"", "")
-
-      val maybeId  = SafeParse.safeToInt(idStr)
-      val maybeRef = SafeParse.safeToInt(refStr)
-      val maybeLen = SafeParse.safeToInt(lengthStr).filter(_ != 0)
-      val maybeWid = SafeParse.safeToInt(widthStr).filter(_ != 0)
-      val maybeLit = SafeParse.safeToInt(lightedStr)
-      val maybeCl  = SafeParse.safeToInt(closedStr)
-
-      maybeId.flatMap { realId =>
-        maybeRef.map { realRef =>
-          val surf = line(5).replaceAll("\"", "")
-          val le   = line(8).replaceAll("\"", "")
-          Runway(
-            realId,
-            realRef,
-            surf,
-            le,
-            maybeLen,
-            maybeWid,
-            maybeLit,
-            maybeCl
-          )
-        }
-      }
-    else None
+    if (line.length >= 9) {
+      for {
+        id <- line(0).toIntOption
+        airportRef <- line(1).toIntOption
+      } yield Runway(
+        id = id,
+        airportRef = airportRef,
+        surface = line(5).replaceAll("\"", ""),
+        leIdent = line(8).replaceAll("\"", ""),
+        length = line.lift(3).flatMap(_.toIntOption).filter(_ > 0),
+        width = line.lift(4).flatMap(_.toIntOption).filter(_ > 0),
+        lighted = line.lift(6).flatMap(_.toIntOption),
+        closed = line.lift(7).flatMap(_.toIntOption)
+      )
+    } else {
+      None
+    }
+}

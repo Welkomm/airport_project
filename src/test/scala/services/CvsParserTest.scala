@@ -1,29 +1,85 @@
 package services
 
-import scala.io.Source
 import munit.FunSuite
+import java.io.File
 
-class CvsParserTest extends FunSuite {
+class CsvParserTest extends FunSuite {
 
-  test("parseCSV should parse lines with skipHeader") {
-    // On peut juste tester la fonction, si besoin
-    val testContent =
-      """id,name
-        |1,Test
-        |2,Example
+  // Exemple de parser pour tester le CsvParser
+  def testParser(columns: Array[String]): Option[String] = {
+    if (columns.nonEmpty) Some(columns(0)) else None
+  }
+
+  test("parseCSV should correctly parse CSV data and return a list of results") {
+    val filename = "test.csv"
+    
+    // Simuler un fichier CSV pour le test
+    val testData = 
+      """name,age,city
+        |John,30,New York
+        |Jane,25,Los Angeles
         |""".stripMargin
 
-    val tempFile = java.io.File.createTempFile("testCsv", ".csv")
-    val writer = new java.io.PrintWriter(tempFile)
-    writer.write(testContent)
+    // Écrire les données de test dans un fichier
+    val writer = new java.io.PrintWriter(new File(filename))
+    writer.write(testData)
     writer.close()
 
-    val list = CsvParser.parseCSV(tempFile.getAbsolutePath) { arr =>
-      if arr.length >= 2 then Some(arr(1)) else None
-    }
+    // Appeler la méthode parseCSV
+    val result = CsvParser.parseCSV(filename, skipHeader = false)(testParser)
 
-    assertEquals(list, List("Test", "Example"))
+    // Vérifier que le résultat est correct
+    assertEquals(result, List("name", "John", "Jane"))
 
-    tempFile.delete()
+    // Supprimer le fichier après le test
+    new File(filename).delete()
+  }
+
+  test("parseCSV should skip the header when skipHeader is true") {
+    val filename = "test.csv"
+
+    val testData = 
+      """name,age,city
+        |John,30,New York
+        |Jane,25,Los Angeles
+        |""".stripMargin
+
+    // Écrire les données de test dans un fichier
+    val writer = new java.io.PrintWriter(new File(filename))
+    writer.write(testData)
+    writer.close()
+
+    // Appeler la méthode parseCSV avec skipHeader = true
+    val result = CsvParser.parseCSV(filename, skipHeader = true)(testParser)
+
+    // Vérifier que le résultat ne contient pas la première ligne (header)
+    assertEquals(result, List("John", "Jane"))
+
+    // Supprimer le fichier après le test
+    new File(filename).delete()
+  }
+
+  test("parseCSV should not skip the header when skipHeader is false") {
+    val filename = "test.csv"
+
+    val testData = 
+      """name,age,city
+        |John,30,New York
+        |Jane,25,Los Angeles
+        |""".stripMargin
+
+    // Écrire les données de test dans un fichier
+    val writer = new java.io.PrintWriter(new File(filename))
+    writer.write(testData)
+    writer.close()
+
+    // Appeler la méthode parseCSV avec skipHeader = false
+    val result = CsvParser.parseCSV(filename, skipHeader = false)(testParser)
+
+    // Vérifier que le résultat contient la première ligne (header)
+    assertEquals(result, List("name", "John", "Jane"))
+
+    // Supprimer le fichier après le test
+    new File(filename).delete()
   }
 }
