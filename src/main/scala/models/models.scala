@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 package models
 
+=======
+>>>>>>> 4070762080c3423c51f801b7cff7536da7d52594
 // Définition des classes de données (case classes) pour le modèle
 case class Country(
   id: Int,           // Identifiant unique du pays
