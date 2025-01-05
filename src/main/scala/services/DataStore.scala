@@ -56,20 +56,24 @@ class DataStore {
   // Algorithme de Levenshtein pour la recherche floue
   private def levenshteinDistance(s1: String, s2: String): Int = {
     val dist = Array.ofDim[Int](s1.length + 1, s2.length + 1)
-    // Initialisation
-    (0 to s1.length).foreach(i => dist(i)(0) = i)
-    (0 to s2.length).foreach(j => dist(0)(j) = j)
-    // Calcul de la distance
-    (1 to s1.length).foreach { i =>
-      (1 to s2.length).foreach { j =>
-        val cost = if (s1(i - 1) == s2(j - 1)) 0 else 1
-        dist(i)(j) = List(
-          dist(i - 1)(j) + 1,
-          dist(i)(j - 1) + 1,
-          dist(i - 1)(j - 1) + cost
-        ).min
-      }
+    
+    dist(0) = (0 to s2.length).toArray
+    (0 to s1.length).map(i => dist(i)(0) = i)
+    
+    val indices = for {
+      i <- 1 to s1.length
+      j <- 1 to s2.length
+    } yield (i, j)
+    
+    indices.map { case (i, j) =>
+      val cost = if (s1(i - 1) == s2(j - 1)) 0 else 1
+      dist(i)(j) = List(
+        dist(i - 1)(j) + 1,
+        dist(i)(j - 1) + 1,
+        dist(i - 1)(j - 1) + cost
+      ).min
     }
+    
     dist(s1.length)(s2.length)
   }
 
