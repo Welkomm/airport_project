@@ -5,7 +5,7 @@ import models._
 
 // Interface utilisateur en mode console
 class ConsoleUI(store: DataStore) {
-  // Menu principal avec options de base
+
   def start(): Unit = {
     println("\nWelcome to the Airport Information System")
     println("1. Query")
@@ -13,7 +13,6 @@ class ConsoleUI(store: DataStore) {
     println("3. Exit")
     print("Select an option (1-3): ")
 
-    // Gestion des choix utilisateur
     val option = scala.io.StdIn.readLine()
     option match {
       case "1" => handleQuery()
@@ -22,7 +21,7 @@ class ConsoleUI(store: DataStore) {
         println("Exiting... Goodbye!")
       case _ =>
         println("Invalid option. Please try again.")
-        start() // Recursion for retrying the input
+        start()
     }
   }
 
@@ -31,34 +30,37 @@ class ConsoleUI(store: DataStore) {
     println("\nEnter country name or code: ")
     val query = scala.io.StdIn.readLine()
 
-    // Recherche et affichage des informations du pays
     store.getCountryByNameOrCode(query) match {
       case Some(country) =>
         println(s"\nCountry: ${country.name} (${country.code})")
         val airports = store.getAirportsForCountry(country.code)
 
-        // Affichage des aéroports et pistes
         if (airports.isEmpty) {
           println("No airports found for this country.")
         } else {
           println(s"Found ${airports.size} airport(s):")
-          airports.foreach { airport =>
-            println(s"\n  Airport: ${airport.name} (${airport.id})")
+          // Construire le texte de sortie via map plutôt que foreach imbriqués
+          val infoLines = airports.map { airport =>
             val runways = store.getRunwaysForAirport(airport.id)
-            if (runways.isEmpty) {
-              println("No runways found for this airport.")
-            } else {
-              println("    Runways:")
-              runways.foreach { runway =>
-                println(s"      - ${runway.leIdent} (Surface: ${runway.surface})")
+            val runwayText =
+              if (runways.isEmpty)
+                "    No runways found for this airport."
+              else {
+                // Ici, pour éviter un foreach imbriqué, on peut faire un map -> mkString
+                val lines = runways.map { r =>
+                  s"      - ${r.leIdent} (Surface: ${r.surface})"
+                }
+                "    Runways:\n" + lines.mkString("\n")
               }
-            }
+            s"\n  Airport: ${airport.name} (${airport.id})\n$runwayText"
           }
+          println(infoLines.mkString("\n"))
         }
+
       case None =>
         println("Country not found. Please check your input and try again.")
     }
-    start() // Recursion for retrying the main menu
+    start()
   }
 
   // Menu des rapports statistiques
@@ -76,9 +78,9 @@ class ConsoleUI(store: DataStore) {
       case "3" => showCommonLatitudes()
       case _ =>
         println("Invalid option. Please try again.")
-        handleReports() // Recursion for retrying report selection
+        handleReports()
     }
-    start() // Recursion for retrying the main menu
+    start()
   }
 
   // Affichage des top 10 pays avec le plus/moins d'aéroports
@@ -88,9 +90,11 @@ class ConsoleUI(store: DataStore) {
     if (topCountries.isEmpty) {
       println("No data available.")
     } else {
-      topCountries.foreach { case (country, count) =>
-        println(s"  ${country.name} (${country.code}): $count airport(s)")
+      // pas de .head, .get => on utilise .map + mkString
+      val lines = topCountries.map { case (country, count) =>
+        s"  ${country.name} (${country.code}): $count airport(s)"
       }
+      println(lines.mkString("\n"))
     }
 
     val bottomCountries = store.getCountriesWithFewestAirports
@@ -98,9 +102,10 @@ class ConsoleUI(store: DataStore) {
     if (bottomCountries.isEmpty) {
       println("No data available.")
     } else {
-      bottomCountries.foreach { case (country, count) =>
-        println(s"  ${country.name} (${country.code}): $count airport(s)")
+      val lines = bottomCountries.map { case (country, count) =>
+        s"  ${country.name} (${country.code}): $count airport(s)"
       }
+      println(lines.mkString("\n"))
     }
   }
 
@@ -111,14 +116,14 @@ class ConsoleUI(store: DataStore) {
     if (runwayTypes.isEmpty) {
       println("No data available.")
     } else {
-      runwayTypes.foreach { case (code, surfaces) =>
-        store.getCountryByNameOrCode(code) match {
-          case Some(country) =>
-            println(s"  ${country.name} (${country.code}):")
-            surfaces.foreach(surface => println(s"    - $surface"))
-          case None => // Do nothing if the country is not found
+      // Ici, on évite les .get en matchant correctement
+      val lines = runwayTypes.toList.flatMap { case (code, surfaces) =>
+        store.getCountryByNameOrCode(code).map { country =>
+          val sList = surfaces.map(s => s"    - $s").mkString("\n")
+          s"  ${country.name} (${country.code}):\n$sList"
         }
       }
+      println(lines.mkString("\n\n"))
     }
   }
 
@@ -129,9 +134,10 @@ class ConsoleUI(store: DataStore) {
     if (commonLatitudes.isEmpty) {
       println("No data available.")
     } else {
-      commonLatitudes.foreach { case (latitude, count) =>
-        println(s"  $latitude: $count occurrence(s)")
+      val lines = commonLatitudes.map { case (latitude, count) =>
+        s"  $latitude: $count occurrence(s)"
       }
+      println(lines.mkString("\n"))
     }
   }
 }
